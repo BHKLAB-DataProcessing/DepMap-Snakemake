@@ -29,11 +29,11 @@ rule download_Release:
     unpack(get_release_files)
   output:
     dir = directory(PROCDATA / "{release}")
-  shell:
-    """
-    mkdir -p "{output.dir}"
-    ls "rawdata/{wildcards.release}" -1 > "{output.dir}"/files.txt
-    """
+  run:
+    Path(output.dir).mkdir(parents=True, exist_ok=True)
+    with open(f"{output.dir}/files.txt", "w") as f:
+        for file in get_release_files(wildcards):
+            f.write(f"{file}\n")
 
 rule download_file:
   output:
