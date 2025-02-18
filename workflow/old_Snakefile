@@ -1,0 +1,78 @@
+from pathlib import Path
+import shutil, os
+import pandas as pd
+from pytools.persistent_dict import PersistentDict
+import requests
+persistentstorage = PersistentDict("mystorage", safe_sync=True)
+
+metadata = Path("metadata")
+
+releases = ['21Q1', '21Q2', '21Q3', '21Q4', '22Q1', '22Q2', '22Q4', '23Q2', '23Q4', '24Q2', '24Q4']
+releases = ['24Q2', '24Q4']
+
+rule all:
+    input:
+        rawdata = expand("rawdata/{release}.zip", release = releases)
+    run:
+        print(persistentstorage.fetch("release_dict"))
+
+def get_releases(wildcards):
+
+    csv = pd.read_csv(checkpoints.get_DepMap_fileList.get().output.fileList)
+    # get all rows where first column start with "DepMap Public" 
+    depmap = csv[csv.iloc[:,0].str.startswith("DepMap Public")].copy()
+
+    # create new column removing "DepMap Public" from first column
+    depmap.loc[:, "release_Q"] = depmap.release.str.replace("DepMap Public", "").str.strip()
+
+    grouped = depmap.groupby("release_Q")
+    release_dict = dict()
+    release_dict = {
+        name: {
+            file: url for file, url in group[['filename', 'url']].to_dict(orient='split')['data']
+        } for name, group in grouped if int(name[0:2]) >= 21}
+        
+    persistentstorage.store("release_dict", release_dict)
+    return ["rawdata/{release}/".format(release=wildcards.release) + 
+        k for k in release_dict[wildcards.release].keys()]
+
+rule download_Release:
+    input:
+        unpack(get_releases)
+    output:
+        zip = "rawdata/{release}.zip"
+    shell:
+        """
+        ls $(dirname {output.zip})/{wildcards.release}
+        """
+
+rule download_file:
+    output:
+        "rawdata/{release}/{file}"
+    run:
+        url = persistentstorage.fetch("release_dict")[wildcards.release][wildcards.file]
+        r = requests.get(url, stream=True)
+        with open(output[0], 'wb') as f:
+            shutil.copyfileobj(r.raw, f)
+
+checkpoint get_DepMap_fileList:
+    params:
+        fileList = "https://depmap.org/portal/api/download/files"
+    output:
+        fileList = metadata / "depmap_fileList.csv",
+    run: # python
+        r = requests.get(params.fileList)
+        with open(output.fileList, 'wb') as f:
+            f.write(r.content)
+
+        # read the contents, get the first column, check if it starts with "DepMap Public"
+        # if it does, get the 3rd split on it 
+        with open(output.fileList, 'r') as f:
+            csv = pd.read_csv(f)
+            depmap = csv[csv.iloc[:,0].str.startswith("DepMap Public")].copy()
+
+            # extract the release_Q
+            release_qs = sorted(list(set([
+                release.split(" ")[2] for release in depmap.release
+            ])))
+        persistentstorage.store("release_qs", release_qs)

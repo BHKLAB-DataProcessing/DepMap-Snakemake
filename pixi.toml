@@ -1,0 +1,15 @@
+[project]
+authors = ["Jermiah Joseph <jermiahjoseph98@gmail.com>"]
+channels = ["conda-forge", "bioconda"]
+name = "DEPMAP"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = ">=3.12.9,<3.13"
+snakemake = ">=8.28.0,<9"
+pandas = ">=2.2.3,<3"
+pytools = ">=2025.1.1,<2026"
+ruff = ">=0.9.6,<0.10"
