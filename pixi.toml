@@ -2,7 +2,7 @@
 authors = ["Jermiah Joseph <jermiahjoseph98@gmail.com>"]
 channels = ["conda-forge", "bioconda"]
 name = "DEPMAP"
-platforms = ["linux-64"]
+platforms = ["linux-64", "osx-64",  "win-64"]
 version = "0.1.0"
 
 [tasks]
@@ -11,5 +11,4 @@ version = "0.1.0"
 python = ">=3.12.9,<3.13"
 snakemake = ">=8.28.0,<9"
 pandas = ">=2.2.3,<3"
-pytools = ">=2025.1.1,<2026"
 ruff = ">=0.9.6,<0.10"
