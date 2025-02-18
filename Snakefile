@@ -1,15 +1,18 @@
 import pandas as pd
 from pathlib import Path
 import requests
+import shutil
 RAWDATA = Path("rawdata")
 PROCDATA = Path("procdata")
-RELEASE_NAME = "Sanger Drug Combinations 2022"
+RELEASE_NAME = "Sanger Drug Combinations 2022".replace(" ", "_")
 
 depmap_db = (
     pd.read_csv("https://depmap.org/portal/api/download/files")
     .query("release == 'Sanger Drug Combinations 2022'")
     .reset_index(drop=True)
 )
+
+
 
 def get_release_files(wildcards):
     return [
@@ -37,12 +40,14 @@ rule download_file:
     download_file = RAWDATA / "{release}" / "{file}"
   retries: 3
   run:
-    base_url = "https://depmap.org/portal/data_page/?tab=allData&releasename="
-    url = f"{base_url}{wildcards.release}&filename={wildcards.file}"
-    with requests.get(url) as r:
-        r.raise_for_status()
-        with open(output.download_file, "wb") as f:
-            f.write(r.content)
+    baseurl = "https://depmap.org/portal/download/api/download"
+    params = {
+      "file_name": f"sanger-drug-drug-interactions-9406.9/{wildcards.file}",
+      "bucket": "depmap-external-downloads"
+    }
+    result = requests.get(baseurl, params=params, stream=True)
+    with open(output.download_file, "wb") as f:
+        shutil.copyfileobj(result.raw, f)
 
 
 rule clean:
