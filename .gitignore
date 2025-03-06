@@ -7,3 +7,4 @@ rawdata
 procdata
 metadata
 .snakemake
+logs
